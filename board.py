@@ -42,31 +42,29 @@ class Board:
         return f"{row_index + 1} | " + " | ".join(str(cell) for cell in row) + " |"
 
     def add_ship(self, row, col, size, direction):
-        # Add a ship of a specific size at a specific location
-        if direction == "N":
-            for i in range(size):
-                if row - size < 0:
-                    print("Invalid ship placement. Ship is out of bounds.")
-                    return
-                self.update_cell(row - i, col, 1)
-        elif direction == "S":
-            if row + size >= self.size:
-                print("Invalid ship placement. Ship is out of bounds.")
+        # Mapping directions to row and column increments
+        direction_map = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
+
+        if direction not in direction_map:
+            print("Invalid direction.")
+            return
+
+        d_row, d_col = direction_map[direction]
+        end_row = row + d_row * (size - 1)
+        end_col = col + d_col * (size - 1)
+
+        # Check if the ship is within bounds
+        if not (0 <= end_row < self.size and 0 <= end_col < self.size):
+            print("Invalid ship placement. Ship is out of bounds.")
+            return
+
+        # Check for overlap and update cells if placement is valid
+        for i in range(size):
+            new_row, new_col = row + d_row * i, col + d_col * i
+            if self.get_cell(new_row, new_col) == 1:
+                print("Invalid ship placement. Ships overlap.")
                 return
-            for i in range(size):
-                self.update_cell(row + i, col, 1)
-        elif direction == "E":
-            if col + size >= self.size:
-                print("Invalid ship placement. Ship is out of bounds.")
-                return
-            for i in range(size):
-                self.update_cell(row, col + i, 1)
-        elif direction == "W":
-            if col - size < 0:
-                print("Invalid ship placement. Ship is out of bounds.")
-                return
-            for i in range(size):
-                self.update_cell(row, col - i, 1)
+            self.update_cell(new_row, new_col, 1)
 
 
 def display_boards_side_by_side(board1, board2):
