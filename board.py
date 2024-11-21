@@ -1,70 +1,125 @@
-import time
 import os
+
+
+class Ship:
+    def __init__(self, size, direction, row, col):
+        """Initialize the ship with its size, direction, starting row and column."""
+        self.size = size
+        self.direction = direction.upper()
+        self.row = row
+        self.col = col
+        self.direction_map = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
+        
+        if self.direction not in self.direction_map:
+            raise ValueError("Invalid direction. Use 'N', 'S', 'E', or 'W'.")
+        
+        self.cells = set(self._init_cells())
+        self.hits = [False] * size
+
+    def hit(self, row, col):
+        """Register a hit if the ship occupies the cell (row, col)."""
+        if (row, col) in self.cells:
+            index = list(self.cells).index((row, col))
+            self.hits[index] = True
+            return True
+        return False
+
+    def is_sunk(self):
+        """Check if all parts of the ship have been hit."""
+        return all(self.hits)
+
+    def _init_cells(self):
+        """Generate cells occupied by the ship based on size and direction."""
+        cells = []
+        d_row, d_col = self.direction_map[self.direction]
+        for i in range(self.size):
+            cells.append((self.row + d_row * i, self.col + d_col * i))
+        return cells
 
 
 class Board:
     def __init__(self, size=9):
-        # Initialize a size x size board with placeholder values (0)
+        """Initialize a size x size board with placeholder values (0)."""
         self.size = size
         self.board = [[0 for _ in range(size)] for _ in range(size)]
+        self.ships = []
 
     def update_cell(self, row, col, value):
-        # Update a specific cell at (row, col) with a new value
+        """Update the cell at (row, col) with the given value."""
         if 0 <= row < self.size and 0 <= col < self.size:
             self.board[row][col] = value
         else:
-            print("Invalid coordinates. Please provide values within the board size.")
+            print("Invalid coordinates. Out of bounds.")
 
     def get_cell(self, row, col):
-        # Get the value of a specific cell at (row, col)
+        """Retrieve the value of the cell at (row, col)."""
         if 0 <= row < self.size and 0 <= col < self.size:
             return self.board[row][col]
-        else:
-            print("Invalid coordinates. Please provide values within the board size.")
-            return None
+        print("Invalid coordinates. Out of bounds.")
+        return None
 
     def display(self):
-        # Define the horizontal border
-        horizontal_border = "+---" * self.size + "+"
-
-        # Print the board with borders
-        print("    A   B   C   D   E   F   G   H   I")
-        print("  " + horizontal_border)
-        i = 1
-        for row in self.board:
-            print(f"{i} | " + " | ".join(str(cell) for cell in row) + " |")
-            i += 1
-            print("  " + horizontal_border)
-
-    def display_row(self, row_index):
-        # Display a single row from the board with borders
-        row = self.board[row_index]
-        return f"{row_index + 1} | " + " | ".join(str(cell) for cell in row) + " |"
+        """Display the board in a readable format with column and row labels."""
+        headers = "    " + "   ".join(chr(65 + i) for i in range(self.size))
+        separator = "  " + "+---" * self.size + "+"
+        
+        print(headers)
+        print(separator)
+        for i, row in enumerate(self.board):
+            row_content = " | ".join(str(cell) for cell in row)
+            print(f"{i + 1:<2} | {row_content} |")
+            print(separator)
 
     def add_ship(self, row, col, size, direction):
-        # Mapping directions to row and column increments
-        direction_map = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
-
-        if direction not in direction_map:
-            print("Invalid direction.")
-            return
-
-        d_row, d_col = direction_map[direction]
-        end_row = row + d_row * (size - 1)
-        end_col = col + d_col * (size - 1)
-
-        # Check if the ship is within bounds
-        if not (0 <= end_row < self.size and 0 <= end_col < self.size):
+        """Attempt to place a ship on the board, checking bounds and overlap."""
+        ship = Ship(size, direction, row, col)
+        
+        # Validate placement
+        if not self._is_within_bounds(ship):
             print("Invalid ship placement. Ship is out of bounds.")
-            return
+            return False
+        
+        if self._has_overlap(ship):
+            print("Invalid ship placement. Ships overlap.")
+            return False
 
-        # Check for overlap and update cells if placement is valid
-        for i in range(size):
-            new_row, new_col = row + d_row * i, col + d_col * i
-            if self.get_cell(new_row, new_col) == 1:
-                print("Invalid ship placement. Ships overlap.")
-                return
-            self.update_cell(new_row, new_col, 1)
+        # Place ship if valid
+        self.ships.append(ship)
+        for cell in ship.cells:
+            self.update_cell(*cell, 1)
+        return True
+
+    def _is_within_bounds(self, ship):
+        """Check if all ship cells are within board boundaries."""
+        for row, col in ship.cells:
+            if not (0 <= row < self.size and 0 <= col < self.size):
+                return False
+        return True
+
+    def _has_overlap(self, ship):
+        """Check if any cell of the ship overlaps with existing ships on the board."""
+        for row, col in ship.cells:
+            if self.get_cell(row, col) == 1:
+                return True
+        return False
+
+    def hit(self, row, col):
+        """Attempt to hit a cell on the board; update and report hit or miss."""
+        for ship in self.ships:
+            if ship.hit(row, col):
+                self.update_cell(row, col, "X")
+                print("Hit!")
+                if ship.is_sunk():
+                    print("You sunk a ship!")
+                return True
+        self.update_cell(row, col, "O")
+        print("Miss!")
+        return False
+
+    def is_game_over(self):
+        """Determine if all ships are sunk, indicating game over."""
+        return all(ship.is_sunk() for ship in self.ships)
+
 
 
 def display_boards_side_by_side(board1, board2):
@@ -89,22 +144,7 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-# # Usage
-# board = Board()
-# board2 = Board()
-
-# display_boards_side_by_side(board, board2)
-
-# # Update cells and display the board
-# time.sleep(2)
-# clear_screen()
-
-# board.add_ship(3, 4, 3, "N")
-# board.add_ship(5, 3, 4, "E")
-
-# board2.add_ship(1, 1, 2, "S")
-# board2.add_ship(8, 1, 3, "W")
-
-# display_boards_side_by_side(board, board2)
-
-# time.sleep(2)
+def display_row(self, row_index):
+        # Display a single row from the board with borders
+        row = self.board[row_index]
+        return f"{row_index + 1} | " + " | ".join(str(cell) for cell in row) + " |"
