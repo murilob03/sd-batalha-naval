@@ -9,24 +9,7 @@ class Ship:
         self.row = row
         self.col = col
         self.direction_map = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
-        
-        if self.direction not in self.direction_map:
-            raise ValueError("Invalid direction. Use 'N', 'S', 'E', or 'W'.")
-        
         self.cells = set(self._init_cells())
-        self.hits = [False] * size
-
-    def hit(self, row, col):
-        """Register a hit if the ship occupies the cell (row, col)."""
-        if (row, col) in self.cells:
-            index = list(self.cells).index((row, col))
-            self.hits[index] = True
-            return True
-        return False
-
-    def is_sunk(self):
-        """Check if all parts of the ship have been hit."""
-        return all(self.hits)
 
     def _init_cells(self):
         """Generate cells occupied by the ship based on size and direction."""
@@ -41,7 +24,7 @@ class Board:
     def __init__(self, size=9):
         """Initialize a size x size board with placeholder values (0)."""
         self.size = size
-        self.board = [[0 for _ in range(size)] for _ in range(size)]
+        self.board = [["0" for _ in range(size)] for _ in range(size)]
         self.ships = []
 
     def update_cell(self, row, col, value):
@@ -62,7 +45,7 @@ class Board:
         """Display the board in a readable format with column and row labels."""
         headers = "    " + "   ".join(chr(65 + i) for i in range(self.size))
         separator = "  " + "+---" * self.size + "+"
-        
+
         print(headers)
         print(separator)
         for i, row in enumerate(self.board):
@@ -73,12 +56,12 @@ class Board:
     def add_ship(self, row, col, size, direction):
         """Attempt to place a ship on the board, checking bounds and overlap."""
         ship = Ship(size, direction, row, col)
-        
+
         # Validate placement
         if not self._is_within_bounds(ship):
             print("Invalid ship placement. Ship is out of bounds.")
             return False
-        
+
         if self._has_overlap(ship):
             print("Invalid ship placement. Ships overlap.")
             return False
@@ -86,7 +69,7 @@ class Board:
         # Place ship if valid
         self.ships.append(ship)
         for cell in ship.cells:
-            self.update_cell(*cell, 1)
+            self.update_cell(*cell, "1")  # type: ignore
         return True
 
     def _is_within_bounds(self, ship):
@@ -103,29 +86,16 @@ class Board:
                 return True
         return False
 
-    def hit(self, row, col):
-        """Attempt to hit a cell on the board; update and report hit or miss."""
-        for ship in self.ships:
-            if ship.hit(row, col):
-                self.update_cell(row, col, "X")
-                print("Hit!")
-                if ship.is_sunk():
-                    print("You sunk a ship!")
-                return True
-        self.update_cell(row, col, "O")
-        print("Miss!")
-        return False
-
-    def is_game_over(self):
-        """Determine if all ships are sunk, indicating game over."""
-        return all(ship.is_sunk() for ship in self.ships)
-
+    def display_row(self, row_index):
+        # Display a single row from the board with borders
+        row = self.board[row_index]
+        return f"{row_index + 1} | " + " | ".join(str(cell) for cell in row) + " |"
 
 
 def display_boards_side_by_side(board1, board2):
     # Display two boards side by side
     horizontal_border = "+---" * board1.size + "+"
-    column_headers = "    A   B   C   D   E   F   G   H   I"
+    column_headers = "    A   B   C   D   E"
 
     # Print the headers
     print(f"{column_headers}          {column_headers}")
@@ -142,9 +112,3 @@ def display_boards_side_by_side(board1, board2):
 def clear_screen():
     # Clear the screen
     os.system("cls" if os.name == "nt" else "clear")
-
-
-def display_row(self, row_index):
-        # Display a single row from the board with borders
-        row = self.board[row_index]
-        return f"{row_index + 1} | " + " | ".join(str(cell) for cell in row) + " |"

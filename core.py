@@ -1,11 +1,16 @@
-import json
 from board import Board, display_boards_side_by_side, clear_screen
+import xmlrpc.client
+import time
+import json
+
+proxy = xmlrpc.client.ServerProxy("http://localhost:8000/")
+player_name = input("Enter your name: ")
 
 
 def main():
     # Initialize boards and display
-    board1 = Board()
-    board2 = Board()
+    board1 = Board(5)
+    board2 = Board(5)
     display_boards_side_by_side(board1, board2)
 
     # Add ships to board1
@@ -15,26 +20,47 @@ def main():
     clear_screen()
     display_boards_side_by_side(board1, board2)
 
-    # Start game loop
-    our_turn = True
+    # Register player with server
+    if not proxy.register_player(player_name, board1.board):
+        print("Failed to register player. Server may be full.")
+        return
 
-    while not game_over():
-        if our_turn:
+    # Wait for the game to start
+    while not proxy.is_game_ready():
+        time.sleep(1)
+
+    while True:
+        if proxy.whose_turn() == player_name:
+            print("Your turn!")
+            if proxy.is_game_over():
+                print("Game over! You lost.")
+                break
+
+            # Update board1 with opponent's move
+            print(proxy.get_board(player_name))
+            board1.board = proxy.get_board(player_name)[0]  # type: ignore
+
+            # Display the updated boards
+            clear_screen()
+            display_boards_side_by_side(board1, board2)
+
             player_turn(board2)
+
+            # Display the updated boards
+            clear_screen()
+            display_boards_side_by_side(board1, board2)
+
+            if proxy.is_game_over():
+                print("Game over! You won.")
+                break
         else:
-            opponent_turn(board1)
-
-        # Display the boards
-        clear_screen()
-        display_boards_side_by_side(board1, board2)
-
-        # Toggle turn
-        our_turn = not our_turn
+            print("Waiting for opponent's move...")
+            time.sleep(1)
 
 
 def add_ships_to_board(board):
     """Add ships to the board based on user input for each ship's size."""
-    ship_sizes = [4, 3, 2]
+    ship_sizes = [2]
     for size in ship_sizes:
         row, col, direction = get_ship_placement(size)
         board.add_ship(row, col, size, direction)
@@ -71,14 +97,17 @@ def player_turn(attack_board):
     """Handle player's turn to attack."""
     row, col = get_attack_coords()
     # Send attack and receive response from server
-    response = send_attack(row, col)  # Assuming send_attack interacts with server
+    response = proxy.make_guess(player_name, row, col)
 
-    if response:  # Assuming response is a boolean indicating hit or miss
+    if response == "Hit":
         print("Hit!")
-        attack_board.update_cell(row, col, "X")
-    else:
+        attack_board.update_cell(row, col, "H")
+    elif response == "Miss":
         print("Miss!")
-        attack_board.update_cell(row, col, "O")
+        attack_board.update_cell(row, col, "M")
+    else:
+        print("Invalid move. Try again.")
+        time.sleep(1)
 
 
 def get_attack_coords():
@@ -89,45 +118,6 @@ def get_attack_coords():
             return extract_coords(attack_coords)
         except ValueError:
             print("Invalid input. Please try again.")
-
-
-def opponent_turn(defense_board):
-    """Handle opponent's turn based on received attack coordinates."""
-    attack_coords = receive_attack()  # Stub for receiving attack coordinates
-    row, col = extract_coords(attack_coords)
-
-    # Check if the attack is a hit or miss
-    hit = defense_board.get_cell(row, col) == 1
-    send_attack_response(hit)  # Stub for sending response to server
-
-    if hit:
-        print("You have been hit!")
-        defense_board.update_cell(row, col, "X")
-    else:
-        print("You have been missed!")
-        defense_board.update_cell(row, col, "O")
-
-
-def game_over():
-    """Placeholder for game over logic."""
-    # Implement game over conditions here
-    pass
-
-
-def receive_attack():
-    """Placeholder for receiving an attack from the server."""
-    pass
-
-
-def send_attack(row, col):
-    """Placeholder for sending an attack to the server."""
-    # Return True for hit, False for miss (mocking response for now)
-    return True
-
-
-def send_attack_response(hit):
-    """Placeholder for sending attack response to server."""
-    pass
 
 
 if __name__ == "__main__":
