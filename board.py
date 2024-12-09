@@ -82,7 +82,7 @@ class Board:
     def _has_overlap(self, ship):
         """Check if any cell of the ship overlaps with existing ships on the board."""
         for row, col in ship.cells:
-            if self.get_cell(row, col) == 1:
+            if self.get_cell(row, col) == '1':
                 return True
         return False
 

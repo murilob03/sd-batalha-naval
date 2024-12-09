@@ -10,7 +10,7 @@ logging.basicConfig(
 
 class GameServer:
     def __init__(self):
-        self.players = {}  # Stores player boards
+        self.players = {}  # Stores player boards and hits
         self.turn = None  # Tracks whose turn it is
 
     def register_player(self, player_name, board_data):

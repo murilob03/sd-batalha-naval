@@ -27,11 +27,13 @@ def main():
 
     # Wait for the game to start
     while not proxy.is_game_ready():
+        print("Waiting for opponent to join...", end="\r")
         time.sleep(1)
 
     while True:
         if proxy.whose_turn() == player_name:
             print("Your turn!")
+
             if proxy.is_game_over():
                 print("Game over! You lost.")
                 break
@@ -54,16 +56,27 @@ def main():
                 print("Game over! You won.")
                 break
         else:
-            print("Waiting for opponent's move...")
+            print("Waiting for opponent's move...", end="\r")
             time.sleep(1)
 
 
 def add_ships_to_board(board):
     """Add ships to the board based on user input for each ship's size."""
-    ship_sizes = [2]
+    ship_sizes = [2, 3, 4]
+
     for size in ship_sizes:
-        row, col, direction = get_ship_placement(size)
-        board.add_ship(row, col, size, direction)
+        ship_added = False
+
+        while not ship_added:
+            row, col, direction = get_ship_placement(size)
+            ship_added = board.add_ship(row, col, size, direction)
+
+            if not ship_added:
+                print("Invalid ship placement. Please try again.")
+                continue
+
+            clear_screen()
+            display_boards_side_by_side(board, Board(board.size))
 
 
 def get_ship_placement(size):
@@ -95,19 +108,25 @@ def parse_coords(coords):
 
 def player_turn(attack_board):
     """Handle player's turn to attack."""
-    row, col = get_attack_coords()
-    # Send attack and receive response from server
-    response = proxy.make_guess(player_name, row, col)
+    valid_attack = False
 
-    if response == "Hit":
-        print("Hit!")
-        attack_board.update_cell(row, col, "H")
-    elif response == "Miss":
-        print("Miss!")
-        attack_board.update_cell(row, col, "M")
-    else:
-        print("Invalid move. Try again.")
-        time.sleep(1)
+    while not valid_attack:
+        row, col = get_attack_coords()
+
+        # Send attack and receive response from server
+        response = proxy.make_guess(player_name, row, col)
+
+        if response == "Hit":
+            print("Hit!")
+            attack_board.update_cell(row, col, "H")
+            valid_attack = True
+        elif response == "Miss":
+            print("Miss!")
+            attack_board.update_cell(row, col, "M")
+            valid_attack = True
+        else:
+            print("Invalid move. Try again.")
+            time.sleep(1)
 
 
 def get_attack_coords():
