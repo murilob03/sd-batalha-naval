@@ -1,5 +1,5 @@
 from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
-import logging, json
+import logging
 
 # Configure logging
 logging.basicConfig(
@@ -12,6 +12,7 @@ class GameServer:
     def __init__(self):
         self.players = {}  # Stores player boards and hits
         self.turn = None  # Tracks whose turn it is
+        self.game_over = False  # Indicates if the game is over
 
     def register_player(self, player_name, board_data):
         """Registers a new player with their board."""
@@ -84,8 +85,11 @@ class GameServer:
     def is_game_over(self):
         """Checks if the game is over and declares the winner."""
         for player_name, data in self.players.items():
-            if data["hits"] >= 2:  # Assuming 9 hits to win
+            if data["hits"] >= 9:  # Assuming 9 hits to win
                 logging.info(f"Game over. {player_name} wins!")
+                if self.game_over:
+                    self._reset_game()
+                self.game_over = True
                 return True
         return False
 
@@ -93,7 +97,7 @@ class GameServer:
         """Returns the board of the given player."""
         if player_name in self.players:
             logging.info(f"Player {player_name} requested their board.")
-            return self.players[player_name]["board"],
+            return (self.players[player_name]["board"],)
         logging.warning(
             f"Player {player_name} requested a board but is not registered."
         )
@@ -106,11 +110,24 @@ class GameServer:
         """Helper method to find the opponent of the given player."""
         return [p for p in self.players if p != player_name][0]
 
+    def _reset_game(self):
+        """Resets the game state."""
+        self.players = {}
+        self.turn = None
+        self.game_over = False
+        logging.info("Game state reset.")
+        logging.info("Battleship server started and awaiting connections...")
+
+
+ip = input("Enter the IP address of the server: ")
+port = input("Enter the port number of the server: ")
 
 # Create server
-server = SimpleXMLRPCServer(
-    ("localhost", 8000), requestHandler=SimpleXMLRPCRequestHandler
-)
+try:
+    server = SimpleXMLRPCServer((ip, int(port)))
+except ValueError:
+    print("Invalid port number. Please enter a valid port number.")
+    exit()
 game = GameServer()
 
 # Register game instance

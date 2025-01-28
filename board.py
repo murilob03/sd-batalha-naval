@@ -93,6 +93,9 @@ class Board:
 
 
 def display_boards_side_by_side(board1, board2):
+    mid_board1 = (board1.size * 4 + 3) // 2
+    header = " " * (mid_board1) + "YOU" + " " * (mid_board1 * 2 + 4) + "OPPONENT"
+    print(header)
     # Display two boards side by side
     horizontal_border = "+---" * board1.size + "+"
     column_headers = "    A   B   C   D   E"

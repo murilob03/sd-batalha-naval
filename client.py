@@ -1,9 +1,15 @@
 from board import Board, display_boards_side_by_side, clear_screen
 import xmlrpc.client
 import time
-import json
 
-proxy = xmlrpc.client.ServerProxy("http://localhost:8000/")
+ip = input("Enter the server IP address: ")
+port = input("Enter the server port: ")
+try:
+    proxy = xmlrpc.client.ServerProxy(f"http://{ip}:{port}/")
+except Exception as e:
+    print("Failed to connect to server. Please try again.")
+    print(str(e))
+    exit()
 player_name = input("Enter your name: ")
 
 
